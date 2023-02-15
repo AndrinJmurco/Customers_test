@@ -1,0 +1,150 @@
+spec_version: 2
+description: blueprint for lab-a
+# blueprint inputs can be provided by the user, API or CI plugin when creating an environment from this blueprint.
+inputs:
+  azure_region:
+    type: string
+    description: "Valid options are: eastus2, northeurope."
+    default: eastus2
+  # azure_region:
+  #   type: string
+  #   description: "Select the Azure region to deploy your LAB to."
+  #   possible_values: ["eastus2", "northeurope"]
+# blueprint outputs define which data that was generated during environment provisioning will be returned to the user, API or CI.
+outputs:
+  dc_rdp_link:
+    value: '{{ .grains.dc_virtual_machine.outputs.vm_rdp_link }}'
+    kind: link
+  hv_rdp_link:
+    value: '{{ .grains.hv_virtual_machine.outputs.vm_rdp_link }}'
+    kind: link
+  netapp_rdp_link:
+    value: '{{ .grains.netapp.outputs.vm_rdp_link }}'
+    kind: link
+  "Lab Resource Group Name":
+    value: '{{ .grains.network_infrastructure.outputs.lab_rg_name }}'  
+    kind: string 
+grains:
+  network_infrastructure:
+    kind: terraform
+    spec:
+      source:
+        store: IT-BA-LAB-QTorque-TF-Modules
+        path: azurerm/network_infrastructure
+      agent:
+        name: varonis-labs-stg
+      inputs:
+      - azure_region: '{{ .inputs.azure_region }}'
+      - labs_vnet_rg: '{{ .params.labs_vnet_rg }}'
+      - labs_vnet_name_eastus2: '{{ .params.labs_vnet_name_eastus2 }}'
+      - labs_vnet_name_northeurope: '{{ .params.labs_vnet_name_northeurope }}'
+      - labs_vnet_ignored_subnet_cidrs_eastus2: '{{ .params.labs_vnet_ignored_subnet_cidrs_eastus2 }}'
+      - labs_vnet_ignored_subnet_cidrs_northeurope: '{{ .params.labs_vnet_ignored_subnet_cidrs_northeurope }}'
+      - labs_rt_eastus2: '{{ .params.labs_rt_eastus2 }}'
+      - labs_rt_northeurope: '{{ .params.labs_rt_northeurope }}'
+      - qualix_subnet_eastus2: '{{ .params.qualix_subnet_eastus2 }}'
+      - qualix_subnet_northeurope: '{{ .params.qualix_subnet_northeurope }}'
+      - resource_Suffix: '{{ .params.Resource_Suffix }}'
+      env-vars: []
+      outputs:
+      - lab_id
+      - lab_rg_name
+      - lab_subnet_name
+      - lab_vnet_name
+      - labs_vnet_cidr
+      - lab_nsg_id
+    # The terraform version that will be used to deploy the module
+    tf-version: 1.3.6
+  dc_virtual_machine:
+    kind: terraform
+    depends-on: network_infrastructure
+    spec:
+      source:
+        store: IT-BA-LAB-QTorque-TF-Modules
+        path: azurerm/windows_virtual_machine
+      agent:
+        name: varonis-labs-stg
+      inputs:
+      - lab_id: '{{ .grains.network_infrastructure.outputs.lab_id }}'
+      - lab_rg_name: '{{ .grains.network_infrastructure.outputs.lab_rg_name }}'
+      - lab_subnet_name: '{{ .grains.network_infrastructure.outputs.lab_subnet_name }}'
+      - lab_vnet_name: '{{ .grains.network_infrastructure.outputs.lab_vnet_name }}'
+      - labs_vnet_rg: '{{ .params.labs_vnet_rg }}'
+      - qualix_ip: '{{ .params.qualix_ip }}'
+      - vm_name: 'dc'
+      - vm_size: 'Standard_D1_v2'
+      - vm_source_disk: 'template_2022051107160229_dc'
+      - vm_source_disk_rg_eastus2: '{{ .params.vm_source_disk_rg_eastus2 }}'
+      - vm_source_disk_rg_northeurope: '{{ .params.vm_source_disk_rg_northeurope }}'
+      - vm_username: '{{ .params.User_Name }}'
+      - vm_password: '{{ .params.RDP_Password }}'
+      - resource_Suffix: '{{ .params.Resource_Suffix }}'
+      env-vars: []
+      outputs:
+      - vm_private_ip
+      - vm_rdp_link
+    # The terraform version that will be used to deploy the module
+    tf-version: 1.3.6
+  hv_virtual_machine:
+    kind: terraform
+    depends-on: network_infrastructure
+    spec:
+      source:
+        store: IT-BA-LAB-QTorque-TF-Modules
+        path: azurerm/windows_virtual_machine
+      agent:
+        name: varonis-labs-stg
+      inputs:
+      - lab_id: '{{ .grains.network_infrastructure.outputs.lab_id }}'
+      - lab_rg_name: '{{ .grains.network_infrastructure.outputs.lab_rg_name }}'
+      - lab_subnet_name: '{{ .grains.network_infrastructure.outputs.lab_subnet_name }}'
+      - lab_vnet_name: '{{ .grains.network_infrastructure.outputs.lab_vnet_name }}'
+      - labs_vnet_rg: '{{ .params.labs_vnet_rg }}'
+      - qualix_ip: '{{ .params.qualix_ip }}'
+      - vm_name: 'hv'
+      - vm_size: 'Standard_D4s_v3'
+      - vm_source_disk: 'template_2022051107160229_hyperv'
+      - vm_source_disk_rg_eastus2: '{{ .params.vm_source_disk_rg_eastus2 }}'
+      - vm_source_disk_rg_northeurope: '{{ .params.vm_source_disk_rg_northeurope }}'
+      - vm_username: '{{ .params.User_Name }}'
+      - vm_password: '{{ .params.RDP_Password }}'
+      - resource_Suffix: '{{ .params.Resource_Suffix }}'
+      env-vars: []
+      outputs:
+      - vm_private_ip
+      - vm_rdp_link
+    # The terraform version that will be used to deploy the module
+    tf-version: 1.3.6
+  netapp:
+    kind: terraform
+    depends-on: network_infrastructure, hv_virtual_machine, dc_virtual_machine
+    spec:
+      source:
+        store: IT-BA-LAB-QTorque-TF-Modules
+        path: netapp-cloudmanager/netapp-cloudmanager_cvo_azure
+      agent:
+        name: varonis-labs-stg
+      inputs:
+      - azure_region: '{{ .inputs.azure_region }}'
+      - lab_id: '{{ .grains.network_infrastructure.outputs.lab_id }}'
+      - lab_rg_name: '{{ .grains.network_infrastructure.outputs.lab_rg_name }}'
+      - lab_subnet_name: '{{ .grains.network_infrastructure.outputs.lab_subnet_name }}'
+      - lab_vnet_name: '{{ .grains.network_infrastructure.outputs.lab_vnet_name }}'
+      - labs_vnet_rg: '{{ .params.labs_vnet_rg }}'
+      - labs_vnet_cidr: '{{ .grains.network_infrastructure.outputs.labs_vnet_cidr }}'
+      - lab_nsg_id: '{{ .grains.network_infrastructure.outputs.lab_nsg_id }}'
+      - netapp_occm_clientid: '{{ .params.netapp_occm_clientid }}'
+      - netapp_occm_clientsecret: '{{ .params.netapp_occm_clientsecret }}'
+      - netapp_occm_connectorid: '{{ .params.netapp_occm_connectorid }}'
+      - netapp_occm_workspaceid: '{{ .params.netapp_occm_workspaceid }}'
+      - netapp_occm_providerid: '{{ .params.netapp_occm_providerid }}'
+      - netapp_occm_svm_password: '{{ .params.netapp_occm_svm_password }}'
+      - resource_Suffix: '{{ .params.Resource_Suffix }}'
+      # - labs_vnet_name_eastus2: 'VaronisDemoEastUS2' # might not need this; should be able to use lab_vnet_name and just specify it as a var in the TF
+      # - labs_vnet_name_northeurope: 'VaronisDemoNorthEurope' # might not need this; should be able to use lab_vnet_name and just specify it as a var in the TF
+      env-vars: []
+      outputs:
+      - vm_private_ip
+      - vm_rdp_link
+    # The terraform version that will be used to deploy the module
+    tf-version: 1.3.6
