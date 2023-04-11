@@ -1,0 +1,66 @@
+({
+"allowed_actions": [
+"Extend",
+"Launch"
+],
+"inn": {
+"action_identifier": {
+"action_type": "Launch",
+"entity_id": null,
+"entity_type": "Environment"
+},
+"blueprint": {
+"grains": [],
+"labels": [
+"QA"
+],
+"last_modified": "2023-04-10T18:48:47Z",
+"name": "lab-opa-tester",
+"repository": "IT-BA-LAB-Torque-Blueprints",
+"url": "https://varonisit.visualstudio.com/DevOps/_git/IT-BA-LAB-Torque-Blueprints?path=blueprints%2Flab-opa-tester.yaml&version=GBmaster&_a=contents"
+},
+"entity_name": "lab-opa-tester-20230411T13240778",
+"inputs": [
+{
+"description": "Select the Azure region to deploy your LAB to.",
+"name": "azure_region",
+"sensitive": false,
+"type": "string",
+"value": "East US"
+}
+],
+"scheduled_end_time": "2023-04-11T20:24:22Z",
+"space_name": "Varonis-Labs-STG",
+"timezone": "America/Chicago",
+"user_account_role": "Admin",
+"user_email": "agurevich@varonis.com",
+"workflows": [
+{
+"inputs": {},
+"name": "RestartVMs",
+"schedules": null
+},
+{
+"inputs": {},
+"name": "TerminateEnv",
+"schedules": [
+"0 0 * * 0-6"
+]
+},
+{
+"inputs": {},
+"name": "PowerOn",
+"schedules": [
+"0 8 * * 0-6"
+]
+},
+{
+"inputs": {},
+"name": "PowerOff",
+"schedules": [
+"0 17 * * 0-6"
+]
+}
+]
+}
+})
